@@ -1,0 +1,2 @@
+run get_supergraph_position.html and click save initial position button to save the initial position of the supergraph, the file save in ./data_processed/{graphName}
+run get_cluster_position.html and click save initial position button to save the initial position of the subgraph, the file save in ./data_processed/{graphName}

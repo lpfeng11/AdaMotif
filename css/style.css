@@ -1,0 +1,34 @@
+body, html {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+}
+
+.container {
+  display: flex;
+  width: 1000px;
+  height: 1000px;
+  padding: 0;
+  overflow: hidden; /* 防止内容溢出 */
+}
+
+.graph {
+  width: 100%; /* 使图形宽度占满整个容器 */
+  height: 100%; /* 使图形高度占满整个容器 */
+  position: relative; /* 相对定位，确保内部元素可以绝对定位 */
+  /* 根据需要调整偏移量，可以去掉或调整transform */
+  transform: translate(0px, 0px); 
+}
+
+#scale-map {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0px; /* 将比例尺宽度设为0 */
+  height: 100%; /* 设置比例尺SVG的高度为100%以充满整个窗口 */
+  background-color: white; /* 设置背景色 */
+  z-index: 1000; /* 确保比例尺SVG在最上层 */
+  border-right: 1px solid #ccc; /* 可选：添加右侧边框 */
+}

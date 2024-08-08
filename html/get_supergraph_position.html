@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>D3.js Node-Link Diagram</title>
+  <script src="../d3/d3.js"></script>
+</head>
+
+<body>
+  <ul>
+    <button onclick="saveGraphData()">save initial position</button>
+  </ul>
+  <div id="graph-container"></div>
+
+  
+
+  <script>
+    function draw_graph(index, graph_name){
+     const filepath = `../data_processed/${graph_name}/supergraph_data/supergraph_data${index}.txt`
+      d3.text(filepath).then(function (text) {
+
+      const lines = text.trim().split('\n').map(line => line.replace(/[\r\n]+/g, ''));
+
+      console.log("lines",lines)
+      
+      let nodes = [];
+      let links = [];
+
+      let readingNodes = false;
+      let readingEdges = false;
+
+      lines.forEach(line => {
+        if (line === 'Nodes:') {
+          readingNodes = true;
+          readingEdges = false;
+        } else if (line === 'Edges:') {
+          readingNodes = false;
+          readingEdges = true;
+        } else if (readingNodes && line !== '') {
+          nodes.push({id:parseInt(line.trim())}); 
+        } else if (readingEdges && line !== '') {
+          const [source, target] = line.trim().split(' ').map(d => parseInt(d));
+          links.push({ source: source, target:target }); 
+        }
+      });
+
+      console.log("Nodes:")
+      console.log(nodes)
+      console.log("Edges:")
+      console.log(links)
+
+      graph.push({
+          index: index,
+          nodes: nodes,
+          links: links
+        })
+
+      const width = 1000
+      const height = 1000
+
+      const colors = d3.schemeTableau10
+
+      const svg = d3.select("#graph-container")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .call(d3.zoom().on("zoom", (event) => {
+          graphContainer.attr("transform", event.transform)
+        }))
+        .append("g")
+      
+      const graphContainer = svg.append("g")
+
+      const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(40))
+        .force("charge", d3.forceManyBody().distanceMax(150).strength(-50))
+        .force("center", d3.forceCenter(width / 2, height / 2).strength(0.1))
+
+      // const simulation = d3.forceSimulation(nodes)
+      //   .force("link", d3.forceLink(links).id(d => d.id))
+      //   .force("charge", d3.forceManyBody())
+      //   .force("center", d3.forceCenter(width / 2, height / 2))
+
+      const link = graphContainer.append("g")
+        .attr("stroke-opacity", 0.6)
+        .attr("stroke-linecap", "round")
+        .selectAll("line")
+        .data(links)
+        .enter()
+        .append("line")
+        .style("stroke", "#999")
+        .style("stroke-width", 1)
+
+      function fillColorFunction(d) {
+        return colors[3];
+      }
+      const node = graphContainer.append("g")
+        .selectAll("circle")
+        .data(nodes)
+        .enter()
+        .append("circle")
+        .attr("r", 5)
+        .attr("fill", (d, i) =>{
+              return 'grey'
+            })
+        .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended))
+
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y)
+
+        node
+          .attr("cx", d => d.x)
+          .attr("cy", d => d.y)
+
+      })
+      function dragstarted (event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart()
+        d.fx = d.x
+        d.fy = d.y
+      }
+
+      function dragged (event, d) {
+        d.fx = event.x
+        d.fy = event.y
+      }
+
+      function dragended (event, d) {
+        if (!event.active) simulation.alphaTarget(0)
+        d.fx = null
+        d.fy = null
+      }
+
+  
+    })
+
+    }
+  </script>
+
+<script>
+    var graph = []
+
+    const graph_name = 'Cpan'  
+    // const graph_name = 'AS-733'  
+    // const graph_name = 'test'
+
+    const representive_cluster_result = `../data_processed/${graph_name}/cluster_result/cluster_result_representive.json`
+    d3.json(representive_cluster_result).then(function(data){
+      const len_cluster_centers_indices = data.cluster_centers_indices.length
+      for(let i = 0; i < len_cluster_centers_indices; i++){
+        draw_graph(i, graph_name)
+      }
+    })
+    
+
+    function saveGraphData () {
+
+        const blob = new Blob([JSON.stringify(graph, null, 2)], { type: "application/json" })
+        const url = URL.createObjectURL(blob)
+
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "supergraph.json"
+        a.click()
+  }
+</script>
+</body>
+
+</html>

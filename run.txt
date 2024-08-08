@@ -1,0 +1,8 @@
+cd py
+python ./run.py
+run align
+python ./merge_unaligned_txt.py
+run get_supergraph_position.html to save
+run get_cluster_position.html to save
+run matlab
+index.html

@@ -1,0 +1,7 @@
+cd align
+
+python run_for_intra-cluster.py
+
+python run_for_inter-cluster.py
+
+python ./merge_unaligned_txt.py

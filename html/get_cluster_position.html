@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>D3.js Node-Link Diagram</title>
+  <script src="../d3/d3.js"></script>
+</head>
+
+<body>
+  <ul>
+    <button onclick="saveGraphData()">save initial position</button>
+  </ul>
+  <div id="graph-container"></div>
+
+  
+
+  <script>
+    function draw_graph(json_data, index, graph_name, supergraph, alignData, cluster_centers_indices, represent_cluster_index){
+
+      const filepath = `../data_processed/${graph_name}/unaligned_subgraph_data/unaligned_subgraph_${index}.txt`
+      d3.text(filepath)
+        .then(text => {
+
+          const lines = text.trim().split('\n').map(line => line.replace(/[\r\n]+/g, ''));
+
+          let nodes = [];
+          let links = [];
+
+          let readingNodes = false;
+          let readingEdges = false;
+
+          lines.forEach(line => {
+            if (line === 'Nodes:') {
+              readingNodes = true;
+              readingEdges = false;
+            } else if (line === 'Edges:') {
+              readingNodes = false;
+              readingEdges = true;
+            } else if (readingNodes && line !== '') {
+              nodes.push({id:parseInt(line.trim())}); 
+            } else if (readingEdges && line !== '') {
+              const [source, target] = line.trim().split(' ').map(d => parseInt(d));
+              links.push({ source: source, target:target }); 
+            }
+          });
+
+          console.log("Nodes:")
+          console.log(nodes)
+          console.log("Edges:")
+          console.log(links)
+
+          graph.push({
+            index: index,
+            nodes: nodes,
+            links: links
+          })
+
+          const width = 1000
+          const height = 1000
+
+          const colors = d3.schemeTableau10
+
+          const svg = d3.select("#graph-container")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .call(d3.zoom().on("zoom", (event) => {
+              graphContainer.attr("transform", event.transform)
+            }))
+            .append("g")
+          
+          const graphContainer = svg.append("g")
+
+        //   const simulation = d3.forceSimulation(nodes)
+        // .force("link", d3.forceLink(links).id(d => d.id).distance(10))
+        // .force("charge", d3.forceManyBody().distanceMax(120).strength(-50))
+        // .force("center", d3.forceCenter(width / 2, height / 2).strength(0.1))
+
+        const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id))
+        .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(width / 2, height / 2))
+
+          function transformData(data) {
+              return data.map(obj => {
+                  return Object.entries(obj).map(([key, value]) => [parseInt(key), value]);
+              });
+          }
+
+          graph_align_supergraph = []
+          if(alignData[cluster_centers_indices][represent_cluster_index] != undefined){
+            graph_align_supergraph = Object.entries(alignData[cluster_centers_indices][represent_cluster_index]).map(([key, value]) => [parseInt(key), value]);
+          }
+         
+          console.log("graph_align_supergraph",graph_align_supergraph)
+
+          const tuplesList = graph_align_supergraph
+
+          const resultObj = {};
+          for (const tuple of tuplesList) {
+              resultObj[tuple[1].toString()] = tuple[0].toString();
+          }
+
+          console.log(resultObj);
+
+          largest_common_subgraph = resultObj
+
+          const temp = {};
+          for (const key in largest_common_subgraph) {
+            if (largest_common_subgraph.hasOwnProperty(key)) {
+              const integerValue = parseInt(key, 10); 
+              const integerValueForValue = parseInt(largest_common_subgraph[key], 10); 
+              temp[integerValue] = integerValueForValue;
+            }
+          }
+          var align = {};
+          for (const key in temp) {
+            value = +temp[key]
+            align[value] = +key
+          }
+          console.log("align",align)
+    
+
+          const link = graphContainer.append("g")
+            .attr("stroke-opacity", 0.6)
+            .attr("stroke-linecap", "round")
+            .selectAll("line")
+            .data(links)
+            .enter()
+            .append("line")
+            .style("stroke", "#999")
+            .style("stroke-width", 1)
+
+          const node = graphContainer.append("g")
+            .selectAll("circle")
+            .data(nodes)
+            .enter()
+            .append("circle")
+            .attr("r", 5)
+            .attr("fill", (d, i) =>{
+              return 'grey'
+            })
+            .call(d3.drag()
+              .on("start", dragstarted)
+              .on("drag", dragged)
+              .on("end", dragended))
+
+          simulation.on("tick", () => {
+            link
+              .attr("x1", d => d.source.x)
+              .attr("y1", d => d.source.y)
+              .attr("x2", d => d.target.x)
+              .attr("y2", d => d.target.y)
+
+            node
+              .attr("cx", d => d.x)
+              .attr("cy", d => d.y)
+
+
+          })
+          function dragstarted (event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart()
+            d.fx = d.x
+            d.fy = d.y
+          }
+
+          function dragged (event, d) {
+            d.fx = event.x
+            d.fy = event.y
+          }
+
+          function dragended (event, d) {
+            if (!event.active) simulation.alphaTarget(0)
+
+            d.fx = event.x
+            d.fy = event.y
+          }
+
+          let align_nodes = []
+          
+          supergraph.forEach((subgraph, i) => {
+            if(subgraph.index == cluster_centers_indices){
+                align_nodes = subgraph.nodes
+            }
+          })
+          
+          nodes.forEach(node => {
+            align_node_id = 0
+            if (align.hasOwnProperty(+node.id)){
+              align_node_id = align[+node.id]
+              let key = false
+              align_nodes.forEach(align_node => {
+                if (+align_node.id == align_node_id) {
+
+                  node.fx = align_node.x ; 
+                  node.fy = align_node.y ; 
+                  key = true
+                }
+              })
+            }
+            });
+
+        })
+    }
+  </script>
+
+<script>
+  var graph = []
+  var graph_result = []
+  var clusterData = []
+
+  const graph_name = 'Cpan' 
+  // const graph_name = 'AS-733'
+  // const graph_name = 'test'
+
+  const superfile = `../data_processed/${graph_name}/supergraph.json`
+  const alignfile = `../data_processed/${graph_name}/graph_align_supergraph.json/graph_align_supergraph.json`
+  const cluster_result = `../data_processed/${graph_name}/cluster_result/cluster_result_subgraph.json`
+  const representive_cluster_result = `../data_processed/${graph_name}/cluster_result/cluster_result_representive.json`
+  Promise.all([
+    d3.json(superfile),
+    d3.json(alignfile),
+    d3.json(cluster_result),
+    d3.json(representive_cluster_result)
+  ]).then(data => {
+        supergraph = data[0]
+        alignData = data[1]
+        console.log("alignData",alignData)
+        clusterData = data[2]
+        representiveData = data[3]
+        console.log("Loaded json files:", data);
+        const len_cluster_centers_indices = representiveData.cluster_centers_indices.length
+        console.log("len_cluster_centers_indices",len_cluster_centers_indices)
+        const len_clusters_str = representiveData.clusters_str.length
+        for(let i = 0; i < len_cluster_centers_indices; i++){
+          const cluster_centers_indices = i
+          let represent_cluster_index = 0
+          for(let j = 0; j < len_clusters_str; j++){
+            if(representiveData.clusters_str[j] == i){
+              const index = clusterData.cluster_centers_indices[j]
+              draw_graph(data, index, graph_name, supergraph, alignData, cluster_centers_indices, represent_cluster_index)
+              represent_cluster_index++
+            }
+            
+          }
+          
+        }
+        
+        
+
+    })
+
+  function saveGraphData () {
+
+    clusterData.cluster_centers_indices.forEach(indice => {
+          graph.forEach(temp_graph => {
+            if(temp_graph.index == indice){
+              graph_result.push(temp_graph)
+            }
+          })
+        })
+
+    const blob = new Blob([JSON.stringify(graph_result, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "representiveGraph.json"
+    a.click()
+  }
+</script>
+</body>
+
+</html>
