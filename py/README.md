@@ -16,8 +16,3 @@ https://github.com/shobrook/communities
 https://karateclub.readthedocs.io/en/latest/notes/resources.html#whole-graph-embedding
 https://github.com/peterewills/NetComp
 https://ysig.github.io/GraKeL/0.1a8/index.html
-
-
-## Graph align
-
-Decision tree is a tree-like model used for classification and regression. It is a non-parametric method that can handle both categorical and numerical data.
