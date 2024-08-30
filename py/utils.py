@@ -8,6 +8,7 @@ import os
 import shutil
 import json
 from karateclub import FeatherGraph
+from node2vec import Node2Vec
 from sklearn.cluster import AffinityPropagation
 from concurrent.futures import ThreadPoolExecutor
 
@@ -230,13 +231,13 @@ class get_feature_representive_subgraph:
 
     def embed_and_extract_features(self, graphs):
         features = []
-        model = FeatherGraph() 
-        model.fit(graphs) 
-        embeddings = model.get_embedding()
-        
-        for emb in embeddings:
-            features.append(emb)
-
+        for G in graphs:
+            node2vec = Node2Vec(G, dimensions=64, walk_length=30, num_walks=200, workers=4)
+            model = node2vec.fit(window=10, min_count=1, batch_words=4)
+            embeddings = np.array([model.wv[str(node)] for node in G.nodes()])
+            feature = np.sum(embeddings, axis=0)
+            features.append(feature)
+        features = np.array(features)
         return features
 
     def getFeatures(self):
@@ -268,7 +269,7 @@ class get_feature_representive_subgraph:
         features = self.embed_and_extract_features(graphs)
         
         return features
-    
+      
 class get_representive_cluster:
     def __init__(self, graphName, feathers):
         self.graphName = graphName
@@ -278,13 +279,8 @@ class get_representive_cluster:
         cluster_centers_indices = []
         clusters_str = []
 
-        # affinity_propagation = AffinityPropagation(max_iter = 20000, convergence_iter=150, affinity='precomputed')
-        alpha = 8
-        affinity_propagation = 0
-        if alpha == 0:
-            affinity_propagation = AffinityPropagation()
-        else:
-            affinity_propagation = AffinityPropagation(preference = -alpha)
+        affinity_propagation = AffinityPropagation()
+
         clusters_affinity_propagation = affinity_propagation.fit_predict(self.feathers)
         clusters_str = ', '.join(map(str, clusters_affinity_propagation))
 
