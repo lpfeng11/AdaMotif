@@ -2,6 +2,8 @@
 
 ***AdaMotif***: Graph Simplification via Adaptive Motif Design
 
+https://ieeexplore.ieee.org/abstract/document/10673788
+
 ## Installation
 
 Configure two Python environments using conda: one for the py folder and another for the align folder. The specific package information is in the requirements.txt file in each corresponding folder. Currently, running code from different environments can only be done by relying on these separate environments.
